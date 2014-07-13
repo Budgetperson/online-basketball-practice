@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>The HTML5 Herald</title>
+  <script src="https://cdn.socket.io/socket.io-1.0.6.js"></script>
+  <script type="text/javascript">
+   var animFrame = window.requestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame    ||
+            window.oRequestAnimationFrame      ||
+            window.msRequestAnimationFrame     ||
+            null ;
+
+  var people = {};
+  var socket = io();
+  var username = "";
+  window.onbeforeunload = confirmExit;
+  function confirmExit() {
+    socket.emit("stop", username);
+  }
+  socket.on("move", function(obj) {
+    people[obj.username] = [obj.x, obj.y];
+  });
+  CanvasRenderingContext2D.prototype.clear = 
+  CanvasRenderingContext2D.prototype.clear || function (preserveTransform) {
+    if (preserveTransform) {
+      this.save();
+      this.setTransform(1, 0, 0, 1, 0, 0);
+    }
+
+    this.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    if (preserveTransform) {
+      this.restore();
+    }           
+    };
+
+    window.onload = function() {
+      username = window.prompt("username:");
+      socket.emit("setup", username);
+
+      var canvas = document.createElement("canvas");
+      var ctx = canvas.getContext("2d");
+      canvas.width = 1000;
+      canvas.height = 600;
+      document.body.appendChild(canvas);
+
+      var court = new Image();
+      court.src = 'court.jpg';
+      court.onload = function() {
+        courtReady = true;
+      }
+
+      var me = new Image();
+      me.src = "crap.png";
+      var ballReady = false;
+      me.onload = function() {
+        ballReady = true
+      }
+      var recursiveAnim = function() {
+        ctx.clear();
+        if(ballReady && courtReady) {
+          ctx.drawImage(court, 100, 0);
+          for (var key in people) {
+            if (people.hasOwnProperty(key)) {
+              var obj = people[key];
+              ctx.drawImage(me, people[key][0], people[key][1]);
+            }
+          }
+        }
+        animFrame( recursiveAnim );
+      };
+
+      canvas.addEventListener("mousemove", doMouseMove, false);
+      function doMouseMove(event) {
+        ctx.clear();
+        socket.emit("move", username, event.pageX, event.pageY);
+        people[username] = [event.pageX, event.pageY]
+      }
+      animFrame( recursiveAnim );
+    }
+    
+  </script>
+</head>
+
+<body>
+</body>
+</html>

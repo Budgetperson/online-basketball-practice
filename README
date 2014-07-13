@@ -1,0 +1,1 @@
+This is a quick little app to try to host some our basketball practices online, just to become comfortable w/ movements and stuff. It's a pretty simple node/socket.io app. Creates a canvas with a bball court, and you can see the other players move around real-time. My first socket.io experience.
