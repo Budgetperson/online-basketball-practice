@@ -4,6 +4,7 @@
   <meta charset="utf-8">
 
   <title>The HTML5 Herald</title>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/lodash.js/2.4.1/lodash.min.js"></script>
   <script src="https://cdn.socket.io/socket.io-1.0.6.js"></script>
   <script type="text/javascript">
    var animFrame = window.requestAnimationFrame ||
@@ -13,15 +14,20 @@
             window.msRequestAnimationFrame     ||
             null ;
 
-  var people = {};
-  var socket = io();
+  people = {};
+  socket = io();
   var username = "";
+  var playerWithBall;
   window.onbeforeunload = confirmExit;
   function confirmExit() {
     socket.emit("stop", username);
   }
   socket.on("move", function(obj) {
     people[obj.username] = [obj.x, obj.y];
+  });
+
+  socket.on("ballposession", function(name) {
+    playerWithBall = name;
   });
   CanvasRenderingContext2D.prototype.clear = 
   CanvasRenderingContext2D.prototype.clear || function (preserveTransform) {
@@ -55,19 +61,35 @@
 
       var me = new Image();
       me.src = "crap.png";
-      var ballReady = false;
+      var personReady = false;
       me.onload = function() {
+        personReady = true
+      }
+
+      var ball = new Image();
+      ball.src = "ball.jpg";
+      var ballReady = false;
+      ball.onload = function() {
         ballReady = true
       }
+
       var recursiveAnim = function() {
         ctx.clear();
-        if(ballReady && courtReady) {
+        if(personReady && courtReady && ballReady) {
           ctx.drawImage(court, 100, 0);
+          var idx = 0;
           for (var key in people) {
             if (people.hasOwnProperty(key)) {
               var obj = people[key];
-              ctx.drawImage(me, people[key][0], people[key][1]);
+              if(playerWithBall === key) {
+                ctx.drawImage(ball, people[key][0]+ 6, people[key][1] + 6);
+              }
+              ctx.textAlign = "left";
+              ctx.textBaseline = "bottom";
+              ctx.fillText(key + " (" + idx + ")", people[key][0], people[key][1]);
+              //ctx.drawImage(me, people[key][0], people[key][1]);
             }
+            idx++;
           }
         }
         animFrame( recursiveAnim );
@@ -80,6 +102,19 @@
         people[username] = [event.pageX, event.pageY]
       }
       animFrame( recursiveAnim );
+    }
+    window.addEventListener("keypress", doKeyDown, false)
+    function doKeyDown(e) {
+      if(playerWithBall === username) {
+        var keyCode = e.keyCode;
+        if(keyCode >= 48 && keyCode <= 53) {
+          var index = keyCode - 48;
+          var usernames = _.keys(people);
+          if(usernames[index] !== undefined) {
+            socket.emit("pass", usernames[index]);
+          }
+        }
+      }  
     }
     
   </script>
